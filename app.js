@@ -617,9 +617,9 @@ if("serviceWorker" in navigator){
     "load",
     () => {
 
-      navigator.serviceWorker
-        .register("./sw.js")
-        .catch(console.warn);
+navigator.serviceWorker
+  .register("./service-worker.js")
+  .catch(console.warn);
 
     }
   );
