@@ -1,1 +1,416 @@
-navigator.serviceWorker.register("./service-worker.js");
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#0b63ce">
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="default"
+  >
+
+  <meta
+    name="apple-mobile-web-app-title"
+    content="KINCO QR"
+  >
+
+  <link
+    rel="manifest"
+    href="./manifest.webmanifest"
+  >
+
+  <link
+    rel="apple-touch-icon"
+    href="./icon-192.png"
+  >
+
+  <link
+    rel="stylesheet"
+    href="./styles.css"
+  >
+
+  <title>KINCO QR</title>
+</head>
+
+<body>
+
+  <main>
+
+    <!-- =====================================================
+         PANTALLA PRINCIPAL
+         ===================================================== -->
+
+    <section
+      id="home"
+      class="screen active"
+    >
+
+      <div class="header">
+
+        <div>
+          <h1>KINCO QR</h1>
+          <p>Lectura y validación de códigos QR</p>
+        </div>
+
+        <div
+          id="statusDot"
+          class="status-dot"
+          aria-label="Estado"
+        ></div>
+
+      </div>
+
+
+      <div class="home-card">
+
+        <div class="logo-box">
+          <img
+            src="./icon-192.png"
+            alt="KINCO QR"
+          >
+        </div>
+
+        <h2>Leer código QR</h2>
+
+        <p>
+          Escanea el código QR generado por la HMI Kinco
+          para consultar y editar sus datos.
+        </p>
+
+        <button
+          id="scanBtn"
+          class="primary-btn"
+          type="button"
+        >
+          📷 ESCANEAR QR
+        </button>
+
+        <button
+          id="pasteBtn"
+          class="secondary-btn"
+          type="button"
+        >
+          📋 PEGAR QR
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PANTALLA DEL ESCÁNER
+         ===================================================== -->
+
+    <section
+      id="scanner"
+      class="screen"
+    >
+
+      <div class="header">
+
+        <div>
+          <h1>Escanear QR</h1>
+          <p>Apunta la cámara al código Kinco</p>
+        </div>
+
+        <div
+          id="scannerStatus"
+          class="status-dot"
+        ></div>
+
+      </div>
+
+
+      <div class="scanner-card">
+
+        <div
+          id="reader"
+          class="reader"
+        ></div>
+
+        <p class="scanner-help">
+          Coloca el código QR dentro del área de lectura.
+        </p>
+
+        <button
+          id="closeScanner"
+          class="secondary-btn"
+          type="button"
+        >
+          ✕ CANCELAR
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PANTALLA DE RESULTADOS
+         ===================================================== -->
+
+    <section
+      id="report"
+      class="screen"
+    >
+
+      <div class="header">
+
+        <div>
+          <h1>Reporte Kinco</h1>
+          <p>Datos del código QR</p>
+        </div>
+
+        <div
+          id="statusDot"
+          class="status-dot"
+        ></div>
+
+      </div>
+
+
+      <div class="report-card">
+
+        <!-- Estado de validación -->
+
+        <div
+          id="validBadge"
+          class="badge invalid"
+        >
+          🔴 QR NO VÁLIDO
+        </div>
+
+
+        <!-- SITIO -->
+
+        <div class="field">
+
+          <label for="siteInput">
+            SITIO
+          </label>
+
+          <input
+            id="siteInput"
+            type="text"
+            autocomplete="off"
+          >
+
+        </div>
+
+
+        <!-- CAMPOS DINÁMICOS -->
+
+        <div id="fields"></div>
+
+
+        <!-- CÓDIGOS -->
+
+        <div class="code-section">
+
+          <div class="code-row">
+
+            <span>
+              Código recibido
+            </span>
+
+            <strong id="receivedCode">
+              —
+            </strong>
+
+          </div>
+
+
+          <div class="code-row">
+
+            <span>
+              Código calculado
+            </span>
+
+            <strong id="calculatedCode">
+              —
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- BOTONES -->
+
+        <div class="button-group">
+
+          <button
+            id="revalidateBtn"
+            class="primary-btn"
+            type="button"
+          >
+            ✓ REVALIDAR
+          </button>
+
+          <button
+            id="copyBtn"
+            class="secondary-btn"
+            type="button"
+          >
+            📋 COPIAR REPORTE
+          </button>
+
+          <button
+            id="shareBtn"
+            class="secondary-btn"
+            type="button"
+          >
+            ↗ COMPARTIR
+          </button>
+
+          <button
+            id="newScan"
+            class="secondary-btn"
+            type="button"
+          >
+            📷 NUEVO ESCANEO
+          </button>
+
+        </div>
+
+
+        <!-- TEXTO ORIGINAL -->
+
+        <details class="raw-section">
+
+          <summary>
+            Ver texto original del QR
+          </summary>
+
+          <textarea
+            id="rawText"
+            readonly
+            rows="12"
+          ></textarea>
+
+        </details>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- =====================================================
+       VENTANA PARA PEGAR QR
+       ===================================================== -->
+
+  <div
+    id="pasteModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-content">
+
+      <h2>Pegar contenido del QR</h2>
+
+      <p>
+        Pega aquí el texto completo obtenido del código QR.
+      </p>
+
+      <textarea
+        id="pasteText"
+        rows="12"
+        placeholder="SITIO=...
+NIVEL 1=...
+NIVEL 2=...
+PRESION 1=...
+PRESION 2=...
+CAUDAL 1=...
+TOTALIZADO 1=...
+CAUDAL 2=...
+TOTALIZADO 2=...
+FECHA=...
+HORA=...
+CODIGO=..."
+      ></textarea>
+
+      <div class="modal-buttons">
+
+        <button
+          id="cancelPaste"
+          class="secondary-btn"
+          type="button"
+        >
+          CANCELAR
+        </button>
+
+        <button
+          id="processPaste"
+          class="primary-btn"
+          type="button"
+        >
+          PROCESAR
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       BIBLIOTECA LECTOR QR
+       ===================================================== -->
+
+  <script
+    src="https://unpkg.com/html5-qrcode"
+  ></script>
+
+
+  <!-- =====================================================
+       APLICACIÓN KINCO QR
+       ===================================================== -->
+
+  <script src="./app.js"></script>
+
+
+  <!-- =====================================================
+       SERVICE WORKER
+       ===================================================== -->
+
+  <script>
+
+    if ("serviceWorker" in navigator) {
+
+      window.addEventListener("load", () => {
+
+        navigator.serviceWorker
+          .register("./service-worker.js")
+          .then(() => {
+            console.log("Service Worker registrado correctamente.");
+          })
+          .catch(error => {
+            console.warn(
+              "Error registrando Service Worker:",
+              error
+            );
+          });
+
+      });
+
+    }
+
+  </script>
+
+</body>
+</html>
