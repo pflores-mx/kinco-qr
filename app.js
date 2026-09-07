@@ -5,623 +5,1057 @@ let scanner = null;
 let scanLocked = false;
 
 const fieldOrder = [
-  "NIVEL 1","NIVEL 2","PRESION 1","PRESION 2",
-  "CAUDAL 1","TOTALIZADO 1","CAUDAL 2","TOTALIZADO 2",
-  "FECHA","HORA"
+"NIVEL 1","NIVEL 2","PRESION 1","PRESION 2",
+"CAUDAL 1","TOTALIZADO 1","CAUDAL 2","TOTALIZADO 2",
+"FECHA","HORA"
 ];
 
 const labels = {
-  "NIVEL 1":"NIVEL 1",
-  "NIVEL 2":"NIVEL 2",
-  "PRESION 1":"PRESIÓN 1",
-  "PRESION 2":"PRESIÓN 2",
-  "CAUDAL 1":"CAUDAL 1",
-  "TOTALIZADO 1":"TOTALIZADO 1",
-  "CAUDAL 2":"CAUDAL 2",
-  "TOTALIZADO 2":"TOTALIZADO 2",
-  "FECHA":"FECHA",
-  "HORA":"HORA"
+"NIVEL 1":"NIVEL 1",
+"NIVEL 2":"NIVEL 2",
+"PRESION 1":"PRESIÓN 1",
+"PRESION 2":"PRESIÓN 2",
+"CAUDAL 1":"CAUDAL 1",
+"TOTALIZADO 1":"TOTALIZADO 1",
+"CAUDAL 2":"CAUDAL 2",
+"TOTALIZADO 2":"TOTALIZADO 2",
+"FECHA":"FECHA",
+"HORA":"HORA"
 };
 
-function show(id){
-  document.querySelectorAll(".screen").forEach(x =>
-    x.classList.remove("active")
-  );
+/* =====================================================
+NAVEGACIÓN
+===================================================== */
 
-  $(id).classList.add("active");
+function show(id){
+
+document.querySelectorAll(".screen").forEach(x =>
+x.classList.remove("active")
+);
+
+const screen = $(id);
+
+if(screen){
+screen.classList.add("active");
 }
+}
+
+/* =====================================================
+NORMALIZACIÓN
+===================================================== */
 
 function normalizeText(text){
-  return text
-    .replace(/\r\n/g,"\n")
-    .replace(/\r/g,"\n");
+
+return String(text)
+.replace(/\r\n/g,"\n")
+.replace(/\r/g,"\n");
 }
+
+/* =====================================================
+CÓDIGO DE VALIDACIÓN KINCO
+===================================================== */
 
 // Algoritmo utilizado por la macro Kinco
-// codigo=5381
-// codigo=codigo*33+byte
-// codigo=codigo%16777216
+//
+// codigo = 5381
+// codigo = codigo * 33 + byte
+// codigo = codigo % 16777216
+
 function validationCode(text){
-  let code = 5381;
 
-  for(const byte of new TextEncoder().encode(text)){
-    code = (code * 33 + byte) % 16777216;
-  }
+let code = 5381;
 
-  return code
-    .toString(16)
-    .toUpperCase()
-    .padStart(6,"0");
+for(const byte of new TextEncoder().encode(text)){
+
+```
+code =
+  (code * 33 + byte) %
+  16777216;
+```
+
 }
+
+return code
+.toString(16)
+.toUpperCase()
+.padStart(6,"0");
+}
+
+/* =====================================================
+INTERPRETAR QR KINCO
+===================================================== */
 
 function parseKinco(text){
 
-  const normalized = normalizeText(text);
-  const lines = normalized.split("\n");
+const normalized =
+normalizeText(text);
 
-  const records = [];
-  let beforeCode = "";
-  let received = null;
+const lines =
+normalized.split("\n");
 
-  for(const line of lines){
+const records = [];
 
-    if(line.toUpperCase().startsWith("CODIGO=")){
-      received = line
-        .substring(line.indexOf("=") + 1)
-        .trim();
+let beforeCode = "";
 
-      break;
-    }
+let received = null;
 
-    if(line === "") continue;
+for(const line of lines){
 
-    const p = line.indexOf("=");
+```
+if(
+  line
+    .toUpperCase()
+    .startsWith("CODIGO=")
+){
 
-    if(p >= 0){
+  received =
+    line
+      .substring(
+        line.indexOf("=") + 1
+      )
+      .trim();
 
-      records.push({
-        key: line.substring(0,p).trim(),
-        value: line.substring(p+1).trim()
-      });
+  break;
+}
 
-      beforeCode += line + "\n";
-    }
-  }
 
-  const calculated = validationCode(beforeCode);
+if(line === ""){
+  continue;
+}
 
-  const valid =
-    !!received &&
-    received.toUpperCase() === calculated;
 
-  const map = {};
+const p =
+  line.indexOf("=");
 
-  records.forEach(r => {
-    map[r.key] = r.value;
+
+if(p >= 0){
+
+  const key =
+    line
+      .substring(0,p)
+      .trim();
+
+  const value =
+    line
+      .substring(p + 1)
+      .trim();
+
+
+  records.push({
+    key:key,
+    value:value
   });
 
-  return {
-    normalized,
-    records,
-    map,
-    received,
-    calculated,
-    valid,
-    beforeCode
-  };
+
+  beforeCode +=
+    line + "\n";
 }
+```
+
+}
+
+const calculated =
+validationCode(beforeCode);
+
+const valid =
+!!received &&
+received.toUpperCase() === calculated;
+
+const map = {};
+
+records.forEach(r => {
+
+```
+map[r.key] =
+  r.value;
+```
+
+});
+
+return {
+normalized,
+records,
+map,
+received,
+calculated,
+valid,
+beforeCode
+};
+}
+
+/* =====================================================
+PROCESAR QR
+===================================================== */
 
 function processQR(text){
 
-  if(!text || !text.trim()){
-    alert("No se recibió texto del QR.");
-    return;
-  }
+if(!text || !text.trim()){
 
-  currentResult = parseKinco(text);
+```
+alert(
+  "No se recibió texto del QR."
+);
 
-  renderResult();
+return;
+```
 
-  show("report");
-
-  $("statusDot").classList.toggle(
-    "ok",
-    currentResult.valid
-  );
 }
+
+currentResult =
+parseKinco(text);
+
+renderResult();
+
+show("report");
+
+const dots =
+document.querySelectorAll(
+".status-dot"
+);
+
+dots.forEach(dot => {
+
+```
+dot.classList.toggle(
+  "ok",
+  currentResult.valid
+);
+```
+
+});
+}
+
+/* =====================================================
+MOSTRAR RESULTADO
+===================================================== */
 
 function renderResult(){
 
-  const r = currentResult;
+const r =
+currentResult;
 
-  $("siteInput").value =
-    r.map["SITIO"] || "";
+$("siteInput").value =
+r.map["SITIO"] || "";
 
-  $("receivedCode").textContent =
-    r.received || "—";
+$("receivedCode").textContent =
+r.received || "—";
 
-  $("calculatedCode").textContent =
-    r.calculated || "—";
+$("calculatedCode").textContent =
+r.calculated || "—";
 
-  const badge = $("validBadge");
+const badge =
+$("validBadge");
 
-  badge.textContent =
-    r.valid
-      ? "🟢 QR VÁLIDO"
-      : "🔴 QR NO VÁLIDO";
+badge.textContent =
+r.valid
+? "🟢 QR VÁLIDO"
+: "🔴 QR NO VÁLIDO";
 
-  badge.className =
-    "badge " + (r.valid ? "valid" : "invalid");
+badge.className =
+"badge " +
+(r.valid
+? "valid"
+: "invalid");
 
-  const container = $("fields");
+const container =
+$("fields");
 
-  container.innerHTML = "";
+container.innerHTML = "";
 
-  fieldOrder.forEach(key => {
+fieldOrder.forEach(key => {
 
-    if(r.map[key] === undefined) return;
-
-    const wrap = document.createElement("div");
-
-    wrap.className = "field";
-
-    const label = document.createElement("label");
-
-    label.textContent =
-      labels[key] || key;
-
-    const input =
-      document.createElement("input");
-
-    input.type = "text";
-    input.value = r.map[key];
-    input.dataset.key = key;
-    input.autocomplete = "off";
-
-    wrap.append(label,input);
-
-    container.append(wrap);
-  });
-
-  $("rawText").value =
-    r.normalized;
+```
+if(
+  r.map[key] === undefined
+){
+  return;
 }
+
+
+const wrap =
+  document.createElement("div");
+
+wrap.className =
+  "field";
+
+
+const label =
+  document.createElement("label");
+
+label.textContent =
+  labels[key] || key;
+
+
+const input =
+  document.createElement("input");
+
+input.type =
+  "text";
+
+input.value =
+  r.map[key];
+
+input.dataset.key =
+  key;
+
+input.autocomplete =
+  "off";
+
+
+wrap.append(
+  label,
+  input
+);
+
+
+container.append(
+  wrap
+);
+```
+
+});
+
+$("rawText").value =
+r.normalized;
+}
+
+/* =====================================================
+RECOPILAR DATOS EDITADOS
+===================================================== */
 
 function collectEdited(){
 
-  const map = {};
+const map = {};
 
-  map["SITIO"] =
-    $("siteInput").value.trim();
+map["SITIO"] =
+$("siteInput")
+.value
+.trim();
 
-  document
-    .querySelectorAll("#fields input")
-    .forEach(input => {
+document
+.querySelectorAll(
+"#fields input"
+)
+.forEach(input => {
 
-      map[input.dataset.key] =
-        input.value.trim();
+```
+  map[input.dataset.key] =
+    input.value.trim();
 
-    });
+});
+```
 
-  return map;
+return map;
 }
+
+/* =====================================================
+CREAR TEXTO EDITADO
+===================================================== */
 
 function makeEditedText(){
 
-  const map = collectEdited();
+const map =
+collectEdited();
 
-  let text = "";
+let text = "";
 
-  if(map["SITIO"] !== undefined){
-    text +=
-      "SITIO=" +
-      map["SITIO"] +
-      "\n";
-  }
+if(
+map["SITIO"] !== undefined
+){
 
-  fieldOrder.forEach(key => {
+```
+text +=
+  "SITIO=" +
+  map["SITIO"] +
+  "\n";
+```
 
-    if(map[key] !== undefined){
-
-      text +=
-        key +
-        "=" +
-        map[key] +
-        "\n";
-
-    }
-
-  });
-
-  return text;
 }
+
+fieldOrder.forEach(key => {
+
+```
+if(
+  map[key] !== undefined
+){
+
+  text +=
+    key +
+    "=" +
+    map[key] +
+    "\n";
+
+}
+```
+
+});
+
+return text;
+}
+
+/* =====================================================
+REVALIDAR
+===================================================== */
 
 function revalidateEdited(){
 
-  const text =
-    makeEditedText();
+const text =
+makeEditedText();
 
-  const code =
-    validationCode(text);
+const code =
+validationCode(text);
 
-  $("calculatedCode").textContent =
-    code;
+$("calculatedCode").textContent =
+code;
 
-  const originalReceived =
-    currentResult.received;
+const originalReceived =
+currentResult.received;
 
-  const valid =
-    !!originalReceived &&
-    originalReceived.toUpperCase() === code;
+const valid =
+!!originalReceived &&
+originalReceived.toUpperCase() === code;
 
-  const badge =
-    $("validBadge");
+const badge =
+$("validBadge");
 
-  badge.textContent =
-    valid
-      ? "🟢 QR VÁLIDO"
-      : "🟡 DATOS EDITADOS";
+badge.textContent =
+valid
+? "🟢 QR VÁLIDO"
+: "🟡 DATOS EDITADOS";
 
-  badge.className =
-    "badge " +
-    (valid ? "valid" : "invalid");
+badge.className =
+"badge " +
+(valid
+? "valid"
+: "invalid");
 
-  if(!valid && originalReceived){
+if(
+!valid &&
+originalReceived
+){
 
-    $("receivedCode").textContent =
-      originalReceived;
+```
+$("receivedCode").textContent =
+  originalReceived;
+```
 
-  }
 }
+}
+
+/* =====================================================
+REPORTE
+===================================================== */
 
 function reportText(){
 
-  const text =
-    makeEditedText();
+const text =
+makeEditedText();
 
-  const code =
-    validationCode(text);
+const code =
+validationCode(text);
 
-  return (
-    text +
-    "CODIGO=" +
-    code
-  );
+return (
+text +
+"CODIGO=" +
+code
+);
 }
+
+/* =====================================================
+COMPARTIR
+===================================================== */
 
 async function shareReport(){
 
-  const text =
-    reportText();
+const text =
+reportText();
 
-  if(navigator.share){
+if(navigator.share){
 
-    try{
+```
+try{
 
-      await navigator.share({
-        title:"Reporte Kinco",
-        text:text
-      });
+  await navigator.share({
+    title:"Reporte Kinco",
+    text:text
+  });
 
-    }catch(e){}
+}catch(e){}
+```
 
-  }else{
+}else{
 
-    await navigator.clipboard.writeText(text);
+```
+await navigator.clipboard.writeText(
+  text
+);
 
-    alert(
-      "Reporte copiado al portapapeles."
-    );
-  }
+
+alert(
+  "Reporte copiado al portapapeles."
+);
+```
+
 }
+}
+
+/* =====================================================
+COPIAR
+===================================================== */
 
 async function copyReport(){
 
-  await navigator.clipboard.writeText(
-    reportText()
-  );
+await navigator.clipboard.writeText(
+reportText()
+);
 
-  alert(
-    "Reporte copiado."
-  );
+alert(
+"Reporte copiado."
+);
 }
 
-
 /* =====================================================
-   LECTOR QR MEJORADO PARA HMI KINCO
-   ===================================================== */
+LECTOR QR PARA IPHONE
+===================================================== */
 
 async function startScanner(){
 
-  show("scanner");
+show("scanner");
 
-  $("statusDot").classList.remove("ok");
+scanLocked = false;
 
-  scanLocked = false;
+/*
+IMPORTANTE:
 
-  if(!window.Html5Qrcode){
+```
+ Eliminamos cualquier lector anterior
+ antes de iniciar uno nuevo.
+```
 
-    alert(
-      "No se pudo cargar el lector QR. " +
-      "Comprueba que tienes internet."
-    );
+*/
 
-    show("home");
+if(scanner){
 
-    return;
-  }
+```
+try{
+  await scanner.stop();
+}catch(e){}
 
-  try{
+try{
+  scanner.clear();
+}catch(e){}
 
-    scanner =
-      new Html5Qrcode(
-        "reader",
-        {
-          verbose:false
-        }
+scanner = null;
+```
+
+}
+
+if(
+!window.Html5Qrcode
+){
+
+```
+alert(
+  "No se pudo cargar el lector QR.\n\n" +
+  "Comprueba que tienes conexión a Internet."
+);
+
+show("home");
+
+return;
+```
+
+}
+
+try{
+
+```
+/*
+   Creamos el lector.
+*/
+
+scanner =
+  new Html5Qrcode(
+    "reader",
+    {
+      verbose:false
+    }
+  );
+
+
+/*
+   =================================================
+   CONFIGURACIÓN OPTIMIZADA PARA IPHONE
+   =================================================
+
+   La configuración anterior era demasiado
+   restrictiva.
+
+   Ahora:
+
+   - 30 FPS
+   - área de lectura grande
+   - QR únicamente
+   - cámara trasera
+   - sin resolución fija de 1920x1080
+   - sin aspectRatio forzado
+   - sin disableFlip
+*/
+
+
+const config = {
+
+  fps:30,
+
+
+  /*
+     El área ocupa aproximadamente el 75%
+     del ancho disponible.
+
+     Esto facilita muchísimo la lectura
+     de códigos QR pequeños de la HMI.
+  */
+
+  qrbox: (viewfinderWidth, viewfinderHeight) => {
+
+    const minDimension =
+      Math.min(
+        viewfinderWidth,
+        viewfinderHeight
       );
 
-    /*
-      Configuración especial:
 
-      - Solo buscamos QR
-      - Mayor velocidad de análisis
-      - Zona de lectura más grande
-      - Cámara trasera
-      - Mayor resolución
-      - Sin invertir la imagen
-    */
+    const size =
+      Math.floor(
+        minDimension * 0.75
+      );
 
-    const config = {
 
-      fps:20,
-
-      qrbox:{
-        width:320,
-        height:320
-      },
-
-      aspectRatio:1.0,
-
-      disableFlip:true,
-
-      formatsToSupport:[
-        Html5QrcodeSupportedFormats.QR_CODE
-      ],
-
-      videoConstraints:{
-        facingMode:{
-          ideal:"environment"
-        },
-
-        width:{
-          ideal:1920
-        },
-
-        height:{
-          ideal:1080
-        }
-      }
-
+    return {
+      width:size,
+      height:size
     };
 
-    await scanner.start(
+  },
 
-      {
-        facingMode:"environment"
-      },
 
-      config,
+  /*
+     Solo buscamos QR.
+  */
 
-      async decodedText => {
+  formatsToSupport:[
+    Html5QrcodeSupportedFormats.QR_CODE
+  ],
 
-        if(scanLocked) return;
 
-        scanLocked = true;
+  /*
+     Permitimos inversión si el lector
+     la necesita.
+  */
 
-        console.log(
-          "QR DETECTADO:",
-          decodedText
-        );
+  disableFlip:false
 
-        try{
+};
 
-          await scanner.stop();
 
-        }catch(e){}
+/*
+   Iniciamos específicamente la
+   cámara trasera.
+*/
 
-        try{
+await scanner.start(
 
-          scanner.clear();
+  {
+    facingMode:{
+      ideal:"environment"
+    }
+  },
 
-        }catch(e){}
 
-        scanner = null;
+  config,
 
-        processQR(decodedText);
 
-      },
+  /*
+     QR DETECTADO
+  */
 
-      errorMessage => {
+  async decodedText => {
 
-        // Los errores normales de búsqueda
-        // NO se muestran al usuario.
+    if(scanLocked){
+      return;
+    }
 
-      }
 
+    scanLocked = true;
+
+
+    console.log(
+      "================================"
     );
 
-  }catch(error){
-
-    console.error(
-      "ERROR DEL LECTOR:",
-      error
+    console.log(
+      "QR DETECTADO:"
     );
 
-    alert(
-      "No se pudo iniciar el lector QR.\n\n" +
-      "Comprueba que la aplicación tenga " +
-      "permiso para usar la cámara y que " +
-      "la dirección sea HTTPS."
+    console.log(
+      decodedText
     );
+
+    console.log(
+      "================================"
+    );
+
+
+    /*
+       Detener cámara.
+    */
 
     try{
 
-      if(scanner){
-        await scanner.stop();
-      }
+      await scanner.stop();
 
-    }catch(e){}
+    }catch(e){
+
+      console.warn(
+        "No se pudo detener cámara:",
+        e
+      );
+
+    }
+
+
+    /*
+       Limpiar lector.
+    */
 
     try{
 
-      if(scanner){
-        scanner.clear();
-      }
+      scanner.clear();
 
     }catch(e){}
+
 
     scanner = null;
 
-    show("home");
+
+    /*
+       Procesar QR.
+    */
+
+    processQR(
+      decodedText
+    );
+
+  },
+
+
+  /*
+     Los errores de búsqueda son normales.
+
+     NO mostramos mensajes.
+  */
+
+  errorMessage => {
+
+    // No hacer nada.
   }
+
+);
+
+
+/*
+   Indicador de cámara activa.
+*/
+
+const dots =
+  document.querySelectorAll(
+    ".status-dot"
+  );
+
+
+dots.forEach(dot => {
+
+  dot.classList.add(
+    "ok"
+  );
+
+});
+```
+
+}catch(error){
+
+```
+console.error(
+  "ERROR DEL LECTOR:",
+  error
+);
+
+
+let mensaje =
+  "No se pudo iniciar el lector QR.\n\n";
+
+
+if(
+  error &&
+  error.message
+){
+
+  mensaje +=
+    error.message;
+
+}else{
+
+  mensaje +=
+    "Comprueba el permiso de cámara.";
 }
 
-async function stopScanner(){
 
-  scanLocked = true;
+alert(
+  mensaje
+);
+
+
+try{
 
   if(scanner){
 
-    try{
-      await scanner.stop();
-    }catch(e){}
+    await scanner.stop();
 
-    try{
-      scanner.clear();
-    }catch(e){}
-
-    scanner = null;
   }
 
-  show("home");
+}catch(e){}
+
+
+try{
+
+  if(scanner){
+
+    scanner.clear();
+
+  }
+
+}catch(e){}
+
+
+scanner = null;
+
+
+show("home");
+```
+
+}
 }
 
+/* =====================================================
+DETENER ESCÁNER
+===================================================== */
+
+async function stopScanner(){
+
+scanLocked = true;
+
+if(scanner){
+
+```
+try{
+
+  await scanner.stop();
+
+}catch(e){}
+
+
+try{
+
+  scanner.clear();
+
+}catch(e){}
+
+
+scanner = null;
+```
+
+}
+
+show("home");
+}
 
 /* =====================================================
-   BOTONES
-   ===================================================== */
+BOTÓN ESCANEAR
+===================================================== */
 
 $("scanBtn")
-  .addEventListener(
-    "click",
-    startScanner
-  );
-
-$("closeScanner")
-  .addEventListener(
-    "click",
-    stopScanner
-  );
-
-
-$("pasteBtn")
-  .addEventListener(
-    "click",
-    () => {
-
-      $("pasteText").value = "";
-
-      $("pasteModal")
-        .classList
-        .remove("hidden");
-
-    }
-  );
-
-
-$("cancelPaste")
-  .addEventListener(
-    "click",
-    () => {
-
-      $("pasteModal")
-        .classList
-        .add("hidden");
-
-    }
-  );
-
-
-$("processPaste")
-  .addEventListener(
-    "click",
-    () => {
-
-      const t =
-        $("pasteText").value;
-
-      $("pasteModal")
-        .classList
-        .add("hidden");
-
-      processQR(t);
-
-    }
-  );
-
-
-$("newScan")
-  .addEventListener(
-    "click",
-    () => {
-
-      show("home");
-
-      $("statusDot")
-        .classList
-        .remove("ok");
-
-    }
-  );
-
-
-$("shareBtn")
-  .addEventListener(
-    "click",
-    shareReport
-  );
-
-
-$("copyBtn")
-  .addEventListener(
-    "click",
-    copyReport
-  );
-
-
-$("revalidateBtn")
-  .addEventListener(
-    "click",
-    revalidateEdited
-  );
-
+.addEventListener(
+"click",
+startScanner
+);
 
 /* =====================================================
-   SERVICE WORKER
-   ===================================================== */
+CANCELAR ESCÁNER
+===================================================== */
 
-if("serviceWorker" in navigator){
+$("closeScanner")
+.addEventListener(
+"click",
+stopScanner
+);
 
-  window.addEventListener(
-    "load",
-    () => {
+/* =====================================================
+PEGAR QR
+===================================================== */
 
-navigator.serviceWorker
-  .register("./service-worker.js")
-  .catch(console.warn);
+$("pasteBtn")
+.addEventListener(
+"click",
+() => {
 
-    }
-  );
+```
+  $("pasteText").value =
+    "";
+
+
+  $("pasteModal")
+    .classList
+    .remove(
+      "hidden"
+    );
+
+}
+```
+
+);
+
+/* =====================================================
+CANCELAR PEGADO
+===================================================== */
+
+$("cancelPaste")
+.addEventListener(
+"click",
+() => {
+
+```
+  $("pasteModal")
+    .classList
+    .add(
+      "hidden"
+    );
+
+}
+```
+
+);
+
+/* =====================================================
+PROCESAR QR PEGADO
+===================================================== */
+
+$("processPaste")
+.addEventListener(
+"click",
+() => {
+
+```
+  const t =
+    $("pasteText").value;
+
+
+  $("pasteModal")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+  processQR(t);
+
+}
+```
+
+);
+
+/* =====================================================
+NUEVO ESCANEO
+===================================================== */
+
+$("newScan")
+.addEventListener(
+"click",
+() => {
+
+```
+  show("home");
+
+
+  document
+    .querySelectorAll(
+      ".status-dot"
+    )
+    .forEach(dot => {
+
+      dot.classList.remove(
+        "ok"
+      );
+
+    });
+
+}
+```
+
+);
+
+/* =====================================================
+COMPARTIR
+===================================================== */
+
+$("shareBtn")
+.addEventListener(
+"click",
+shareReport
+);
+
+/* =====================================================
+COPIAR
+===================================================== */
+
+$("copyBtn")
+.addEventListener(
+"click",
+copyReport
+);
+
+/* =====================================================
+REVALIDAR
+===================================================== */
+
+$("revalidateBtn")
+.addEventListener(
+"click",
+revalidateEdited
+);
+
+/* =====================================================
+SERVICE WORKER
+===================================================== */
+
+if(
+"serviceWorker" in navigator
+){
+
+window.addEventListener(
+"load",
+() => {
+
+```
+  navigator.serviceWorker
+    .register(
+      "./service-worker.js"
+    )
+    .catch(
+      console.warn
+    );
+
+}
+
+);
 
 }
